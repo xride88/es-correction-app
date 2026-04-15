@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 60; // Vercel関数タイムアウトを60秒に設定
+
 const POLLINATIONS_URL = "https://text.pollinations.ai/";
 const MODEL = "openai";
 
