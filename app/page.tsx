@@ -37,11 +37,24 @@ interface CorrectionResult {
 
 async function callPollinations(prompt: string): Promise<string> {
   const seed = Math.floor(Math.random() * 10000);
-  const encodedPrompt = encodeURIComponent(prompt);
-  const url = `https://text.pollinations.ai/${encodedPrompt}?model=openai&seed=${seed}&nolog=true`;
-  const res = await fetch(url, { method: "GET" });
+  const res = await fetch("https://text.pollinations.ai/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [{ role: "user", content: prompt }],
+      model: "openai-fast",
+      seed,
+      stream: false,
+    }),
+  });
   if (!res.ok) throw new Error(`AIサービスエラー: ${res.status}`);
-  return res.text();
+  const text = await res.text();
+  try {
+    const obj = JSON.parse(text);
+    const content = obj?.choices?.[0]?.message?.content ?? obj?.content ?? null;
+    if (content) return content;
+  } catch { /* プレーンテキストならそのまま */ }
+  return text;
 }
 
 export default function Home() {
