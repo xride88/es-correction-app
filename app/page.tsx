@@ -45,14 +45,14 @@ async function callPollinations(prompt: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content: "You are a JSON-only output assistant. You must respond with valid JSON and nothing else. No explanations, no markdown, no code blocks. Just raw JSON.",
+          content: "You are a JSON API. Always respond with a single valid JSON object only. Never write explanations or any text outside the JSON.",
         },
         { role: "user", content: prompt },
       ],
       model: "openai",
       seed,
       stream: false,
-      response_format: { type: "json_object" },
+      json: true,
     }),
   });
 
@@ -115,36 +115,41 @@ export default function Home() {
         ? `\n教員からの指導メモ（添削に反映し、teacherFeedbackとして学生向けに整形すること）：\n${teacherComment.trim()}`
         : "";
 
-      const prompt = `あなたはプロの就職活動添削者です。以下の情報をもとに学生のESを添削し、指定のJSON形式で出力してください。JSON以外は一切出力しないこと。
+      const prompt = `You are a professional Japanese ES (entry sheet) corrector. Correct the student's ES text and return ONLY a JSON object.
 
-【学生情報】
-性格・強み：${personality || "未記入"}
-志望業界・職種：${industry || "未記入"}
-エピソード・体験：${episodes || "未記入"}
+Student personality: ${personality || "not specified"}
+Target industry: ${industry || "not specified"}
+Student episode: ${episodes || "not specified"}
+Company culture: ${cultureInfos}${teacherSection}
+Original ES: ${esText}
 
-【志望企業の風土】
-${cultureInfos}${teacherSection}
-
-【元のES文章】
-${esText}
-
-【出力するJSONの仕様】
-- teacherFeedback：教員メモをもとに学生へ直接伝える丁寧な指導コメント（100字以上の日本語）。教員メモがない場合は空文字。
-- patterns：5つの添削パターン。各パターンは以下のフィールドを持つ。
-  - id：1〜5の番号
-  - name：パターン名（例：論理重視型、熱量重視型、具体性重視型、簡潔明瞭型、個性発揮型）
-  - style：そのパターンのアプローチの説明（30字程度）
-  - correctedText：添削後の完成した日本語ES文章（200字以上、実際の文章を書くこと）
-  - points：添削で改善した具体的なポイントを3つ（それぞれ実際の内容を書くこと）
-
-必ず有効なJSONのみを返すこと。`;
+Return this JSON (fill in all fields with real Japanese content):
+{
+  "teacherFeedback": "(if teacher notes exist: write 100+ char polished Japanese feedback for student, else empty string)",
+  "patterns": [
+    {"id": 1, "name": "論理重視型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]},
+    {"id": 2, "name": "熱量重視型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]},
+    {"id": 3, "name": "具体性重視型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]},
+    {"id": 4, "name": "簡潔明瞭型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]},
+    {"id": 5, "name": "個性発揮型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]}
+  ]
+}`;
 
       const text = await callPollinations(prompt);
-      const stripped = text.replace(/```json\n?/g, "").replace(/```\n?/g, "");
-      const jsonMatch = stripped.match(/\{[\s\S]*"patterns"[\s\S]*\}/);
-      if (!jsonMatch) throw new Error(`AIの返答を解析できませんでした。再試行してください。\n(受信内容: ${text.slice(0, 100)})`);
-
-      const result: CorrectionResult = JSON.parse(jsonMatch[0]);
+      // コードブロック除去 → JSON抽出（最初の { から最後の } まで）
+      const stripped = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      // まず全体をJSONとしてパース試みる
+      let result: CorrectionResult | null = null;
+      try {
+        const parsed = JSON.parse(stripped);
+        if (parsed.patterns) result = parsed;
+      } catch {
+        // 全体パース失敗 → patterns を含む JSON ブロックを探す
+        const jsonMatch = stripped.match(/\{[\s\S]*?"patterns"[\s\S]*\}/);
+        if (!jsonMatch) throw new Error(`AIの返答を解析できませんでした。再試行してください。\n(受信内容: ${text.slice(0, 100)})`);
+        result = JSON.parse(jsonMatch[0]);
+      }
+      if (!result || !result.patterns) throw new Error("AIの返答にパターンが含まれていません。再試行してください。");
 
       setPatterns(result.patterns);
       setResultCultureLabel(cultureLabel);
