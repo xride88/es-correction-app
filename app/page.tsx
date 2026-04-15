@@ -45,11 +45,35 @@ interface Pattern {
 
 async function callPollinations(prompt: string): Promise<string> {
   const seed = Math.floor(Math.random() * 10000);
-  const encoded = encodeURIComponent(prompt);
-  const url = `https://text.pollinations.ai/${encoded}?model=openai&seed=${seed}&nolog=true`;
-  const res = await fetch(url);
+
+  // POST形式で送信（ブラウザからはUser-Agentが通常のブラウザ文字列になるため）
+  const res = await fetch("https://text.pollinations.ai/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [{ role: "user", content: prompt }],
+      model: "openai",
+      seed,
+      stream: false,
+    }),
+  });
+
   if (!res.ok) throw new Error(`AIサービスエラー: ${res.status}`);
-  return res.text();
+  const text = await res.text();
+
+  // レスポンス形式を判別して抽出
+  try {
+    const obj = JSON.parse(text);
+    // OpenAI形式: choices[0].message.content
+    const content = obj?.choices?.[0]?.message?.content ?? obj?.content ?? null;
+    if (content) return content;
+    // reasoning_content のみの場合はそちらを使う
+    const rc = obj?.choices?.[0]?.message?.reasoning_content ?? obj?.reasoning_content ?? null;
+    if (rc) return rc;
+  } catch {
+    // プレーンテキストならそのまま返す
+  }
+  return text;
 }
 
 export default function Home() {
@@ -86,10 +110,14 @@ export default function Home() {
 {"patterns":[{"id":1,"name":"論理重視型","style":"PREP法で整理","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":2,"name":"熱量重視型","style":"熱意が伝わる表現","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":3,"name":"具体性重視型","style":"数値・事実を前面に","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":4,"name":"簡潔明瞭型","style":"短くインパクト重視","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":5,"name":"個性発揮型","style":"学生の個性を最大限活かす","correctedText":"200字以上の添削文","points":["point1","point2","point3"]}]}`;
 
       const text = await callPollinations(prompt);
-      const jsonMatch = text.match(/\{[\s\S]*"patterns"[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("AIの返答を解析できませんでした。再試行してください。");
+      // コードブロック除去 → JSONを抽出
+      const stripped = text.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+      const jsonMatch = stripped.match(/\{[\s\S]*"patterns"[\s\S]*\}/);
+      if (!jsonMatch) throw new Error(`AIの返答を解析できませんでした。再試行してください。\n(受信内容: ${text.slice(0, 100)})`);
+
 
       const result = JSON.parse(jsonMatch[0]);
+
       setPatterns(result.patterns);
       setCultureLabel(label);
       setActiveTab(0);
