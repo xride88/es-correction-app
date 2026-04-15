@@ -4,35 +4,22 @@ import { useState } from "react";
 
 const CULTURE_OPTIONS = [
   { key: "venture", label: "ベンチャー/スタートアップ", emoji: "🚀" },
-  { key: "bigcompany", label: "大手老舗企業", emoji: "🏢" },
-  { key: "taiiku", label: "体育会系・営業重視", emoji: "💪" },
-  { key: "creative", label: "クリエイティブ・メディア系", emoji: "🎨" },
-  { key: "ittech", label: "ITテック・エンジニア系", emoji: "💻" },
-  { key: "consulting", label: "コンサルティング", emoji: "📊" },
-  { key: "finance", label: "金融・証券・銀行", emoji: "🏦" },
-  { key: "maker", label: "メーカー・製造業", emoji: "🔧" },
+  { key: "bigcompany", label: "大手企業", emoji: "🏢" },
+  { key: "shinise", label: "老舗企業", emoji: "🏛️" },
+  { key: "taiiku", label: "体育会系", emoji: "💪" },
+  { key: "kazokuteki", label: "風通しがいい", emoji: "🌿" },
+  { key: "creative", label: "個性重視", emoji: "🎨" },
+  { key: "kofu", label: "古風な風土", emoji: "🎌" },
 ];
 
 const CULTURE_PRESETS: Record<string, string> = {
   venture: `【ベンチャー/スタートアップ】スピード感・行動力・変化への対応力を重視。「自ら動く」「仮説検証」「成長志向」が刺さる。失敗経験や挑戦エピソードを積極的に評価。熱量と本音が伝わる文体。`,
-  bigcompany: `【大手老舗企業】安定感・誠実さ・長期的なコミット感を重視。組織への貢献、チームワーク、継続力がキーワード。論理的で丁寧な文章構成を好む。企業理念・社会貢献との一致をアピールする。`,
-  taiiku: `【体育会系・営業重視企業】根性・チャレンジ精神・負けず嫌いを評価。数値や成果・目標達成のエピソードが刺さる。熱意・ガッツが伝わる力強い表現を好む。`,
-  creative: `【クリエイティブ・メディア系】独自性・感性・発想力・表現力を重視。動機と熱量が重要。個性的な切り口を好む。自分の視点・感性を言語化する文章スタイル。`,
-  ittech: `【ITテック・エンジニア系企業】論理思考・問題解決力・技術への好奇心を重視。具体的な経験・数値でロジカルに語る。「課題→仮説→実行→結果」の構成が評価される。`,
-  consulting: `【コンサルティング】論理構成力・課題解決力・知的好奇心を重視。PREP法など論理的な文章構成が求められる。抽象→具体の展開、数値的根拠が重要。`,
-  finance: `【金融・証券・銀行】誠実さ・責任感・信頼性・慎重さを最重視。正確さ・丁寧さが伝わる文章スタイルを好む。リスク管理意識のアピールが有効。`,
-  maker: `【メーカー・製造業】ものづくりへの情熱・粘り強さ・チームワークを重視。改善意識・品質へのこだわり・継続力がキーワード。具体的な経験・成果が評価される。`,
-};
-
-const CULTURE_LABELS: Record<string, string> = {
-  venture: "ベンチャー/スタートアップ",
-  bigcompany: "大手老舗企業",
-  taiiku: "体育会系・営業重視",
-  creative: "クリエイティブ・メディア系",
-  ittech: "ITテック・エンジニア系",
-  consulting: "コンサルティング",
-  finance: "金融・証券・銀行",
-  maker: "メーカー・製造業",
+  bigcompany: `【大手企業】ブランド力・スケール感・組織力を活かした仕事を重視。安定した組織の中で大きなプロジェクトに携わる志向。チームワークと組織貢献がキーワード。論理的で格式ある文章構成を好む。`,
+  shinise: `【老舗企業】伝統・信頼・誠実さを最重視。長期的なコミット感と企業理念への共感が重要。歴史ある企業文化を尊重し、継続力・誠実さ・地道な努力をアピールする。丁寧な文章スタイルを好む。`,
+  taiiku: `【体育会系企業】根性・チャレンジ精神・負けず嫌いを評価。数値や成果・目標達成のエピソードが刺さる。熱意・ガッツが伝わる力強い表現を好む。チームの中で自分がどう貢献したかを明確に。`,
+  kazokuteki: `【風通しがいい企業】オープンなコミュニケーション・自由な発想・フラットな組織を重視。意見を言いやすい環境で自分らしく働きたい志向。自発性・協調性・相互尊重がキーワード。明るく率直な文体。`,
+  creative: `【個性重視企業】独自性・感性・発想力・自己表現を最重視。動機と熱量が重要。個性的な切り口・ユニークな視点を好む。自分だけの強みや世界観を言語化する文章スタイル。`,
+  kofu: `【古風な風土の企業】礼儀・上下関係・忠誠心・伝統的な価値観を重視。目上を敬い、組織のルールに従う姿勢が評価される。謙虚さ・礼節・勤勉さをアピールする。改まった丁寧な文体を好む。`,
 };
 
 interface Pattern {
@@ -46,7 +33,6 @@ interface Pattern {
 async function callPollinations(prompt: string): Promise<string> {
   const seed = Math.floor(Math.random() * 10000);
 
-  // POST形式で送信（ブラウザからはUser-Agentが通常のブラウザ文字列になるため）
   const res = await fetch("https://text.pollinations.ai/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -61,13 +47,10 @@ async function callPollinations(prompt: string): Promise<string> {
   if (!res.ok) throw new Error(`AIサービスエラー: ${res.status}`);
   const text = await res.text();
 
-  // レスポンス形式を判別して抽出
   try {
     const obj = JSON.parse(text);
-    // OpenAI形式: choices[0].message.content
     const content = obj?.choices?.[0]?.message?.content ?? obj?.content ?? null;
     if (content) return content;
-    // reasoning_content のみの場合はそちらを使う
     const rc = obj?.choices?.[0]?.message?.reasoning_content ?? obj?.reasoning_content ?? null;
     if (rc) return rc;
   } catch {
@@ -81,45 +64,65 @@ export default function Home() {
   const [personality, setPersonality] = useState("");
   const [industry, setIndustry] = useState("");
   const [episodes, setEpisodes] = useState("");
-  const [cultureKey, setCultureKey] = useState("");
+  const [cultureKeys, setCultureKeys] = useState<string[]>([]);
+  const [teacherComment, setTeacherComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [patterns, setPatterns] = useState<Pattern[]>([]);
-  const [cultureLabel, setCultureLabel] = useState("");
+  const [resultCultureLabel, setResultCultureLabel] = useState("");
+  const [resultTeacherComment, setResultTeacherComment] = useState("");
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState(0);
 
+  const toggleCulture = (key: string) => {
+    setCultureKeys((prev) => {
+      if (prev.includes(key)) {
+        return prev.filter((k) => k !== key);
+      }
+      if (prev.length < 2) {
+        return [...prev, key];
+      }
+      // 2つ選択済みの場合、最初に選んだものを外して新しいものを追加
+      return [prev[1], key];
+    });
+  };
+
   const handleSubmit = async () => {
     if (!esText.trim()) { setError("ES文章を入力してください"); return; }
-    if (!cultureKey) { setError("企業風土を選択してください"); return; }
+    if (cultureKeys.length === 0) { setError("企業風土を1つ以上選択してください"); return; }
     setError("");
     setLoading(true);
     setPatterns([]);
 
     try {
-      const cultureInfo = CULTURE_PRESETS[cultureKey];
-      const label = CULTURE_LABELS[cultureKey];
+      const cultureInfos = cultureKeys.map((k) => CULTURE_PRESETS[k]).join("\n");
+      const cultureLabel = cultureKeys
+        .map((k) => CULTURE_OPTIONS.find((o) => o.key === k)?.label ?? k)
+        .join(" + ");
+
+      const teacherSection = teacherComment.trim()
+        ? `\n教員からの指導メモ（この内容を添削に反映させること）：\n${teacherComment.trim()}`
+        : "";
 
       const prompt = `あなたは就職活動のプロフェッショナルな添削者です。
 学生のエントリーシート（ES）を企業風土に合わせて5パターンで添削してください。
 
 学生情報：性格・強み「${personality || "未記入"}」、志望「${industry || "未記入"}」、エピソード「${episodes || "未記入"}」
-企業風土：${cultureInfo}
+企業風土：${cultureInfos}${teacherSection}
 元のES：${esText}
 
 以下のJSON形式のみで返してください（説明文不要）：
 {"patterns":[{"id":1,"name":"論理重視型","style":"PREP法で整理","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":2,"name":"熱量重視型","style":"熱意が伝わる表現","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":3,"name":"具体性重視型","style":"数値・事実を前面に","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":4,"name":"簡潔明瞭型","style":"短くインパクト重視","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":5,"name":"個性発揮型","style":"学生の個性を最大限活かす","correctedText":"200字以上の添削文","points":["point1","point2","point3"]}]}`;
 
       const text = await callPollinations(prompt);
-      // コードブロック除去 → JSONを抽出
       const stripped = text.replace(/```json\n?/g, "").replace(/```\n?/g, "");
       const jsonMatch = stripped.match(/\{[\s\S]*"patterns"[\s\S]*\}/);
       if (!jsonMatch) throw new Error(`AIの返答を解析できませんでした。再試行してください。\n(受信内容: ${text.slice(0, 100)})`);
 
-
       const result = JSON.parse(jsonMatch[0]);
 
       setPatterns(result.patterns);
-      setCultureLabel(label);
+      setResultCultureLabel(cultureLabel);
+      setResultTeacherComment(teacherComment.trim());
       setActiveTab(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "通信エラーが発生しました。再試行してください。");
@@ -128,7 +131,7 @@ export default function Home() {
     }
   };
 
-  const handleReset = () => { setPatterns([]); setError(""); setActiveTab(0); };
+  const handleReset = () => { setPatterns([]); setError(""); setActiveTab(0); setResultTeacherComment(""); };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -176,18 +179,35 @@ export default function Home() {
             </section>
 
             <section className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-              <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-800 mb-1 flex items-center gap-2">
                 <span className="w-7 h-7 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-sm font-bold">3</span>
                 志望企業の風土を選択
               </h2>
+              <p className="text-xs text-slate-400 mb-4 ml-9">最大2つまで選択できます（{cultureKeys.length}/2）</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {CULTURE_OPTIONS.map((opt) => (
-                  <button key={opt.key} onClick={() => setCultureKey(opt.key)} className={`p-3 rounded-xl border-2 text-left transition-all ${cultureKey === opt.key ? "border-blue-500 bg-blue-50 shadow-sm" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}>
-                    <div className="text-2xl mb-1">{opt.emoji}</div>
-                    <div className={`text-xs font-medium leading-tight ${cultureKey === opt.key ? "text-blue-700" : "text-slate-700"}`}>{opt.label}</div>
-                  </button>
-                ))}
+                {CULTURE_OPTIONS.map((opt) => {
+                  const selected = cultureKeys.includes(opt.key);
+                  const order = cultureKeys.indexOf(opt.key);
+                  return (
+                    <button key={opt.key} onClick={() => toggleCulture(opt.key)} className={`p-3 rounded-xl border-2 text-left transition-all relative ${selected ? "border-blue-500 bg-blue-50 shadow-sm" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}>
+                      {selected && (
+                        <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center font-bold">{order + 1}</span>
+                      )}
+                      <div className="text-2xl mb-1">{opt.emoji}</div>
+                      <div className={`text-xs font-medium leading-tight ${selected ? "text-blue-700" : "text-slate-700"}`}>{opt.label}</div>
+                    </button>
+                  );
+                })}
               </div>
+            </section>
+
+            <section className="bg-amber-50 rounded-2xl shadow-sm border border-amber-200 p-6">
+              <h2 className="text-lg font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                <span className="w-7 h-7 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-sm font-bold">4</span>
+                教員からの指導メモ<span className="text-sm font-normal text-slate-500 ml-1">（任意）</span>
+              </h2>
+              <p className="text-xs text-amber-700 mb-3 ml-9">添削結果に反映され、学生にそのまま共有できます</p>
+              <textarea value={teacherComment} onChange={(e) => setTeacherComment(e.target.value)} placeholder="例：冒頭の箇所はもっと個性を出した表現の方がアピールできると思います。実習のエピソードを入れてみたらいかがでしょうか？" rows={4} className="w-full px-4 py-3 border border-amber-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition resize-none bg-white" />
             </section>
 
             {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm whitespace-pre-line">{error}</div>}
@@ -203,10 +223,20 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">添削結果</h2>
-                <p className="text-sm text-slate-500 mt-0.5">企業風土：<span className="font-medium text-blue-600">{cultureLabel}</span></p>
+                <p className="text-sm text-slate-500 mt-0.5">企業風土：<span className="font-medium text-blue-600">{resultCultureLabel}</span></p>
               </div>
               <button onClick={handleReset} className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition">← 最初に戻る</button>
             </div>
+
+            {resultTeacherComment && (
+              <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-amber-600 font-bold text-sm">教員からの指導メモ</span>
+                  <span className="text-xs text-amber-500 bg-amber-100 px-2 py-0.5 rounded-full">この添削に反映済み</span>
+                </div>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{resultTeacherComment}</p>
+              </div>
+            )}
 
             <div className="flex gap-2 overflow-x-auto pb-1">
               {patterns.map((p, i) => (
