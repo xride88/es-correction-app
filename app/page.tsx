@@ -37,38 +37,11 @@ interface CorrectionResult {
 
 async function callPollinations(prompt: string): Promise<string> {
   const seed = Math.floor(Math.random() * 10000);
-
-  const res = await fetch("https://text.pollinations.ai/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messages: [
-        {
-          role: "system",
-          content: "You are a JSON API. Always respond with a single valid JSON object only. Never write explanations or any text outside the JSON.",
-        },
-        { role: "user", content: prompt },
-      ],
-      model: "openai",
-      seed,
-      stream: false,
-      json: true,
-    }),
-  });
-
+  const encodedPrompt = encodeURIComponent(prompt);
+  const url = `https://text.pollinations.ai/${encodedPrompt}?model=openai&seed=${seed}&nolog=true`;
+  const res = await fetch(url, { method: "GET" });
   if (!res.ok) throw new Error(`AIサービスエラー: ${res.status}`);
-  const text = await res.text();
-
-  try {
-    const obj = JSON.parse(text);
-    const content = obj?.choices?.[0]?.message?.content ?? obj?.content ?? null;
-    if (content) return content;
-    const rc = obj?.choices?.[0]?.message?.reasoning_content ?? obj?.reasoning_content ?? null;
-    if (rc) return rc;
-  } catch {
-    // プレーンテキストならそのまま返す
-  }
-  return text;
+  return res.text();
 }
 
 export default function Home() {
@@ -115,25 +88,14 @@ export default function Home() {
         ? `\n教員からの指導メモ（添削に反映し、teacherFeedbackとして学生向けに整形すること）：\n${teacherComment.trim()}`
         : "";
 
-      const prompt = `You are a professional Japanese ES (entry sheet) corrector. Correct the student's ES text and return ONLY a JSON object.
+      const prompt = `あなたは就職活動のプロフェッショナルな添削者です。学生のESを企業風土に合わせて5パターンで添削してください。
 
-Student personality: ${personality || "not specified"}
-Target industry: ${industry || "not specified"}
-Student episode: ${episodes || "not specified"}
-Company culture: ${cultureInfos}${teacherSection}
-Original ES: ${esText}
+学生情報：性格「${personality || "未記入"}」志望「${industry || "未記入"}」エピソード「${episodes || "未記入"}」
+企業風土：${cultureInfos}${teacherSection}
+元のES：${esText}
 
-Return this JSON (fill in all fields with real Japanese content):
-{
-  "teacherFeedback": "(if teacher notes exist: write 100+ char polished Japanese feedback for student, else empty string)",
-  "patterns": [
-    {"id": 1, "name": "論理重視型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]},
-    {"id": 2, "name": "熱量重視型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]},
-    {"id": 3, "name": "具体性重視型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]},
-    {"id": 4, "name": "簡潔明瞭型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]},
-    {"id": 5, "name": "個性発揮型", "style": "(approach description)", "correctedText": "(200+ char corrected Japanese ES)", "points": ["(specific improvement 1)", "(specific improvement 2)", "(specific improvement 3)"]}
-  ]
-}`;
+以下のJSON形式のみで返してください（前後に説明文やコードブロック記号を入れないこと）：
+{"teacherFeedback":"教員メモがある場合は学生に伝える丁寧な指導コメントを100字以上で書く。教員メモがない場合は空文字","patterns":[{"id":1,"name":"論理重視型","style":"PREP法を用いて論理的に整理","correctedText":"200字以上の完成した添削後のES文章をここに書く","points":["この添削で具体的に改善した箇所の説明1","改善した箇所の説明2","改善した箇所の説明3"]},{"id":2,"name":"熱量重視型","style":"熱意と想いが伝わる感情豊かな表現","correctedText":"200字以上の完成した添削後のES文章をここに書く","points":["この添削で具体的に改善した箇所の説明1","改善した箇所の説明2","改善した箇所の説明3"]},{"id":3,"name":"具体性重視型","style":"数値・事実・エピソードを前面に出す","correctedText":"200字以上の完成した添削後のES文章をここに書く","points":["この添削で具体的に改善した箇所の説明1","改善した箇所の説明2","改善した箇所の説明3"]},{"id":4,"name":"簡潔明瞭型","style":"短く鋭くインパクトを重視","correctedText":"200字以上の完成した添削後のES文章をここに書く","points":["この添削で具体的に改善した箇所の説明1","改善した箇所の説明2","改善した箇所の説明3"]},{"id":5,"name":"個性発揮型","style":"学生の個性と強みを最大限に活かす","correctedText":"200字以上の完成した添削後のES文章をここに書く","points":["この添削で具体的に改善した箇所の説明1","改善した箇所の説明2","改善した箇所の説明3"]}]}`;
 
       const text = await callPollinations(prompt);
       // コードブロック除去 → JSON抽出（最初の { から最後の } まで）
