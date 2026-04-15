@@ -37,10 +37,17 @@ async function callPollinations(prompt: string): Promise<string> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "system",
+          content: "You are a JSON-only output assistant. You must respond with valid JSON and nothing else. No explanations, no markdown, no code blocks. Just raw JSON.",
+        },
+        { role: "user", content: prompt },
+      ],
       model: "openai",
       seed,
       stream: false,
+      response_format: { type: "json_object" },
     }),
   });
 
@@ -103,15 +110,14 @@ export default function Home() {
         ? `\n教員からの指導メモ（この内容を添削に反映させること）：\n${teacherComment.trim()}`
         : "";
 
-      const prompt = `あなたは就職活動のプロフェッショナルな添削者です。
-学生のエントリーシート（ES）を企業風土に合わせて5パターンで添削してください。
+      const prompt = `ES correction task. Output ONLY a JSON object, no other text.
 
-学生情報：性格・強み「${personality || "未記入"}」、志望「${industry || "未記入"}」、エピソード「${episodes || "未記入"}」
-企業風土：${cultureInfos}${teacherSection}
-元のES：${esText}
+Student info: personality="${personality || "未記入"}", target="${industry || "未記入"}", episode="${episodes || "未記入"}"
+Company culture: ${cultureInfos}${teacherSection}
+Original ES text: ${esText}
 
-以下のJSON形式のみで返してください（説明文不要）：
-{"patterns":[{"id":1,"name":"論理重視型","style":"PREP法で整理","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":2,"name":"熱量重視型","style":"熱意が伝わる表現","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":3,"name":"具体性重視型","style":"数値・事実を前面に","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":4,"name":"簡潔明瞭型","style":"短くインパクト重視","correctedText":"200字以上の添削文","points":["point1","point2","point3"]},{"id":5,"name":"個性発揮型","style":"学生の個性を最大限活かす","correctedText":"200字以上の添削文","points":["point1","point2","point3"]}]}`;
+Return this exact JSON structure with 5 patterns, each correctedText must be 200+ Japanese characters:
+{"patterns":[{"id":1,"name":"論理重視型","style":"PREP法で整理","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]},{"id":2,"name":"熱量重視型","style":"熱意が伝わる表現","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]},{"id":3,"name":"具体性重視型","style":"数値・事実を前面に","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]},{"id":4,"name":"簡潔明瞭型","style":"短くインパクト重視","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]},{"id":5,"name":"個性発揮型","style":"学生の個性を最大限活かす","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]}]}`;
 
       const text = await callPollinations(prompt);
       const stripped = text.replace(/```json\n?/g, "").replace(/```\n?/g, "");
