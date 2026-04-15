@@ -30,6 +30,11 @@ interface Pattern {
   points: string[];
 }
 
+interface CorrectionResult {
+  teacherFeedback: string;
+  patterns: Pattern[];
+}
+
 async function callPollinations(prompt: string): Promise<string> {
   const seed = Math.floor(Math.random() * 10000);
 
@@ -76,7 +81,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [resultCultureLabel, setResultCultureLabel] = useState("");
-  const [resultTeacherComment, setResultTeacherComment] = useState("");
+  const [resultTeacherFeedback, setResultTeacherFeedback] = useState("");
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState(0);
 
@@ -107,28 +112,43 @@ export default function Home() {
         .join(" + ");
 
       const teacherSection = teacherComment.trim()
-        ? `\n教員からの指導メモ（この内容を添削に反映させること）：\n${teacherComment.trim()}`
+        ? `\n教員からの指導メモ（添削に反映し、teacherFeedbackとして学生向けに整形すること）：\n${teacherComment.trim()}`
         : "";
 
-      const prompt = `ES correction task. Output ONLY a JSON object, no other text.
+      const prompt = `あなたはプロの就職活動添削者です。以下の情報をもとに学生のESを添削し、指定のJSON形式で出力してください。JSON以外は一切出力しないこと。
 
-Student info: personality="${personality || "未記入"}", target="${industry || "未記入"}", episode="${episodes || "未記入"}"
-Company culture: ${cultureInfos}${teacherSection}
-Original ES text: ${esText}
+【学生情報】
+性格・強み：${personality || "未記入"}
+志望業界・職種：${industry || "未記入"}
+エピソード・体験：${episodes || "未記入"}
 
-Return this exact JSON structure with 5 patterns, each correctedText must be 200+ Japanese characters:
-{"patterns":[{"id":1,"name":"論理重視型","style":"PREP法で整理","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]},{"id":2,"name":"熱量重視型","style":"熱意が伝わる表現","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]},{"id":3,"name":"具体性重視型","style":"数値・事実を前面に","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]},{"id":4,"name":"簡潔明瞭型","style":"短くインパクト重視","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]},{"id":5,"name":"個性発揮型","style":"学生の個性を最大限活かす","correctedText":"200字以上の日本語添削文をここに書く","points":["ポイント1","ポイント2","ポイント3"]}]}`;
+【志望企業の風土】
+${cultureInfos}${teacherSection}
+
+【元のES文章】
+${esText}
+
+【出力するJSONの仕様】
+- teacherFeedback：教員メモをもとに学生へ直接伝える丁寧な指導コメント（100字以上の日本語）。教員メモがない場合は空文字。
+- patterns：5つの添削パターン。各パターンは以下のフィールドを持つ。
+  - id：1〜5の番号
+  - name：パターン名（例：論理重視型、熱量重視型、具体性重視型、簡潔明瞭型、個性発揮型）
+  - style：そのパターンのアプローチの説明（30字程度）
+  - correctedText：添削後の完成した日本語ES文章（200字以上、実際の文章を書くこと）
+  - points：添削で改善した具体的なポイントを3つ（それぞれ実際の内容を書くこと）
+
+必ず有効なJSONのみを返すこと。`;
 
       const text = await callPollinations(prompt);
       const stripped = text.replace(/```json\n?/g, "").replace(/```\n?/g, "");
       const jsonMatch = stripped.match(/\{[\s\S]*"patterns"[\s\S]*\}/);
       if (!jsonMatch) throw new Error(`AIの返答を解析できませんでした。再試行してください。\n(受信内容: ${text.slice(0, 100)})`);
 
-      const result = JSON.parse(jsonMatch[0]);
+      const result: CorrectionResult = JSON.parse(jsonMatch[0]);
 
       setPatterns(result.patterns);
       setResultCultureLabel(cultureLabel);
-      setResultTeacherComment(teacherComment.trim());
+      setResultTeacherFeedback(result.teacherFeedback ?? "");
       setActiveTab(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "通信エラーが発生しました。再試行してください。");
@@ -137,7 +157,7 @@ Return this exact JSON structure with 5 patterns, each correctedText must be 200
     }
   };
 
-  const handleReset = () => { setPatterns([]); setError(""); setActiveTab(0); setResultTeacherComment(""); };
+  const handleReset = () => { setPatterns([]); setError(""); setActiveTab(0); setResultTeacherFeedback(""); };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -234,13 +254,16 @@ Return this exact JSON structure with 5 patterns, each correctedText must be 200
               <button onClick={handleReset} className="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition">← 最初に戻る</button>
             </div>
 
-            {resultTeacherComment && (
+            {resultTeacherFeedback && (
               <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-amber-600 font-bold text-sm">教員からの指導メモ</span>
-                  <span className="text-xs text-amber-500 bg-amber-100 px-2 py-0.5 rounded-full">この添削に反映済み</span>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-700 font-bold text-sm">教員からの指導コメント</span>
+                    <span className="text-xs text-amber-500 bg-amber-100 px-2 py-0.5 rounded-full">学生へそのまま送れます</span>
+                  </div>
+                  <button onClick={() => navigator.clipboard.writeText(resultTeacherFeedback)} className="flex-shrink-0 px-3 py-1.5 text-xs text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-100 transition">コピー</button>
                 </div>
-                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{resultTeacherComment}</p>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{resultTeacherFeedback}</p>
               </div>
             )}
 
