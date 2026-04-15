@@ -112,7 +112,7 @@ ${esText}
     // GETエンドポイントを使用（reasoning modelを回避）
     const seed = Math.floor(Math.random() * 10000);
     const encodedPrompt = encodeURIComponent(prompt);
-    const url = `${POLLINATIONS_BASE}/${encodedPrompt}?model=openai&json=true&seed=${seed}&nolog=true`;
+    const url = `${POLLINATIONS_BASE}/${encodedPrompt}?model=openai&seed=${seed}&nolog=true`;
 
     const response = await fetch(url, { method: "GET" });
 
