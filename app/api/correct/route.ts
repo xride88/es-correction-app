@@ -114,7 +114,6 @@ ${esText}
       body: JSON.stringify({
         messages: [{ role: "user", content: prompt }],
         model: MODEL,
-        jsonMode: true,
         seed: Math.floor(Math.random() * 10000),
       }),
     });
@@ -124,7 +123,22 @@ ${esText}
     }
 
     const text = await response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+    // レスポンスがメッセージオブジェクトの場合（推論モデル等）とプレーンテキストの両方に対応
+    let searchTarget = text;
+    try {
+      const obj = JSON.parse(text);
+      if (obj.content && typeof obj.content === "string") {
+        searchTarget = obj.content;
+      } else if (obj.reasoning_content && typeof obj.reasoning_content === "string") {
+        // 推論モデルは reasoning_content に最終JSONを含む場合がある
+        searchTarget = obj.reasoning_content;
+      }
+    } catch {
+      // プレーンテキストならそのまま使用
+    }
+
+    const jsonMatch = searchTarget.match(/\{"patterns"[\s\S]*?\][\s\S]*?\}/);
     if (!jsonMatch) {
       throw new Error("AIからのレスポンスを解析できませんでした");
     }
