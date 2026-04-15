@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 60; // Vercel関数タイムアウトを60秒に設定
 
-const POLLINATIONS_URL = "https://text.pollinations.ai/";
+const POLLINATIONS_URL = "https://text.pollinations.ai/openai/chat/completions";
 const MODEL = "openai";
 
 const CULTURE_PRESETS: Record<string, string> = {
@@ -126,24 +126,24 @@ ${esText}
 
     const text = await response.text();
 
-    // レスポンスがメッセージオブジェクトの場合（推論モデル等）とプレーンテキストの両方に対応
+    // OpenAI互換レスポンス: choices[0].message.content を取得
     let searchTarget = text;
     try {
       const obj = JSON.parse(text);
-      if (obj.content && typeof obj.content === "string") {
+      // OpenAI形式: { choices: [{ message: { content: "..." } }] }
+      const content = obj?.choices?.[0]?.message?.content;
+      if (content && typeof content === "string") {
+        searchTarget = content;
+      } else if (obj?.content && typeof obj.content === "string") {
         searchTarget = obj.content;
-      } else if (obj.reasoning_content && typeof obj.reasoning_content === "string") {
-        // 推論モデルは reasoning_content に最終JSONを含む場合がある
-        searchTarget = obj.reasoning_content;
       }
     } catch {
       // プレーンテキストならそのまま使用
     }
 
-    const jsonMatch = searchTarget.match(/\{"patterns"[\s\S]*?\][\s\S]*?\}/);
+    const jsonMatch = searchTarget.match(/\{[\s\S]*"patterns"[\s\S]*\}/);
     if (!jsonMatch) {
-      // デバッグ用：実際のレスポンス先頭500文字を返す
-      throw new Error(`解析失敗 [${text.length}bytes]: ${text.slice(0, 300)}`);
+      throw new Error(`解析失敗 [${text.length}bytes]: ${text.slice(0, 200)}`);
     }
 
     const result = JSON.parse(jsonMatch[0]);
