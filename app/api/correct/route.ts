@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 60; // Vercel関数タイムアウトを60秒に設定
 
-const POLLINATIONS_URL = "https://text.pollinations.ai/openai/chat/completions";
-const MODEL = "openai";
+const POLLINATIONS_BASE = "https://text.pollinations.ai";
 
 const CULTURE_PRESETS: Record<string, string> = {
   venture: `【ベンチャー/スタートアップ】
@@ -110,38 +109,19 @@ ${esText}
 
 {"patterns":[{"id":1,"name":"論理重視型","style":"PREP法で整理し根拠を明確化","correctedText":"ここに添削後の文章","points":["ポイント1","ポイント2","ポイント3"]},{"id":2,"name":"熱量重視型","style":"熱意・想いが伝わる感情豊かな表現","correctedText":"ここに添削後の文章","points":["ポイント1","ポイント2","ポイント3"]},{"id":3,"name":"具体性重視型","style":"数値・事実・エピソードを前面に","correctedText":"ここに添削後の文章","points":["ポイント1","ポイント2","ポイント3"]},{"id":4,"name":"簡潔明瞭型","style":"短く鋭い文章でインパクト重視","correctedText":"ここに添削後の文章","points":["ポイント1","ポイント2","ポイント3"]},{"id":5,"name":"個性発揮型","style":"学生の個性・強みを最大限に活かす","correctedText":"ここに添削後の文章","points":["ポイント1","ポイント2","ポイント3"]}]}`;
 
-    const response = await fetch(POLLINATIONS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: [{ role: "user", content: prompt }],
-        model: MODEL,
-        seed: Math.floor(Math.random() * 10000),
-      }),
-    });
+    // GETエンドポイントを使用（reasoning modelを回避）
+    const seed = Math.floor(Math.random() * 10000);
+    const encodedPrompt = encodeURIComponent(prompt);
+    const url = `${POLLINATIONS_BASE}/${encodedPrompt}?model=openai&json=true&seed=${seed}&nolog=true`;
+
+    const response = await fetch(url, { method: "GET" });
 
     if (!response.ok) {
       throw new Error(`AIサービスエラー: ${response.status}`);
     }
 
     const text = await response.text();
-
-    // OpenAI互換レスポンス: choices[0].message.content を取得
-    let searchTarget = text;
-    try {
-      const obj = JSON.parse(text);
-      // OpenAI形式: { choices: [{ message: { content: "..." } }] }
-      const content = obj?.choices?.[0]?.message?.content;
-      if (content && typeof content === "string") {
-        searchTarget = content;
-      } else if (obj?.content && typeof obj.content === "string") {
-        searchTarget = obj.content;
-      }
-    } catch {
-      // プレーンテキストならそのまま使用
-    }
-
-    const jsonMatch = searchTarget.match(/\{[\s\S]*"patterns"[\s\S]*\}/);
+    const jsonMatch = text.match(/\{[\s\S]*"patterns"[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error(`解析失敗 [${text.length}bytes]: ${text.slice(0, 200)}`);
     }
