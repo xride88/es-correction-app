@@ -142,7 +142,8 @@ ${esText}
 
     const jsonMatch = searchTarget.match(/\{"patterns"[\s\S]*?\][\s\S]*?\}/);
     if (!jsonMatch) {
-      throw new Error("AIからのレスポンスを解析できませんでした");
+      // デバッグ用：実際のレスポンス先頭500文字を返す
+      throw new Error(`解析失敗 [${text.length}bytes]: ${text.slice(0, 300)}`);
     }
 
     const result = JSON.parse(jsonMatch[0]);
