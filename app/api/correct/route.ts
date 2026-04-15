@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const POLLINATIONS_URL = "https://text.pollinations.ai/";
+const MODEL = "openai";
 
 const CULTURE_PRESETS: Record<string, string> = {
   venture: `【ベンチャー/スタートアップ】
@@ -112,7 +113,7 @@ ${esText}
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         messages: [{ role: "user", content: prompt }],
-        model: "openai-large",
+        model: MODEL,
         jsonMode: true,
         seed: Math.floor(Math.random() * 10000),
       }),
